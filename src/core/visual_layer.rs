@@ -6,7 +6,7 @@ use crate::common::{ BoundingBox, LayerChannel };
 
 /// Il motore spaziale e logico applicabile ai Container del copione.
 /// Gestisce la profondità, la visibilità globale e i filtri dei canali attivi.
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize, Hash)]
 pub struct VisualLayer {
     pub z_index: i32,
     pub visible: bool,

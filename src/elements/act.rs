@@ -16,7 +16,7 @@ fn default_scenes() -> [Uuid; MAX_SCENE_PER_ACT] { [Uuid::nil(); MAX_SCENE_PER_A
 
 /// Rappresenta un macro-blocco narrativo (Atto) basato su indici.
 /// Raccoglie le relazioni con le scene figlie e il cast dell'atto tramite UUID.
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Hash)]
 pub struct Act<'a> {
     pub meta: Meta,
     pub visual: VisualLayer,

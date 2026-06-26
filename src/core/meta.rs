@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::common::utils::current_timestamp;
 
 /// Contenitore atomico di metadati di sistema puri (Identità e Tempo).
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, Hash)]
 pub struct Meta {
     pub id: Uuid,
     pub created_at: u64,

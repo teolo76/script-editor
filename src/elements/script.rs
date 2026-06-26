@@ -16,7 +16,7 @@ use crate::common::constants::{
 fn default_acts() -> [Uuid; MAX_ACTS_PER_SCRIPT] { [Uuid::nil(); MAX_ACTS_PER_SCRIPT] }
 fn default_cast() -> [Uuid; MAX_CHARACTERS_PER_SCRIPT] { [Uuid::nil(); MAX_CHARACTERS_PER_SCRIPT] }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Hash)]
 pub struct Script<'a>{
     pub meta: Meta,
     pub switchboard: SwitchBoard,

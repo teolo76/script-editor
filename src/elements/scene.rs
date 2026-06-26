@@ -2,6 +2,7 @@
 
 use uuid::Uuid;
 use serde::{ Serialize, Deserialize };
+use std::hash::{ Hash, Hasher };
 
 // Package Modules
 use crate::core::{ Meta, VisualLayer };
@@ -165,6 +166,27 @@ impl<'a> LayeredElement for Scene<'a> {
     fn visual_layer(&self) -> &VisualLayer { &self.visual }
     fn visual_layer_mut(&mut self) -> &mut VisualLayer { &mut self.visual }
 }
+
+impl<'a> Hash for Scene<'a> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // 1. Hash dei componenti core e geometrici
+        self.meta.hash(state);
+        self.visual.hash(state);
+        self.number.hash(state);
+        self.title.hash(state);
+
+        // 2. Trasformazione del float duration_minutes in bit grezzi u32
+        self.duration_minutes.to_bits().hash(state);
+
+        // 3. Hash delle fette attive degli array statici (solo gli elementi validi fino al count)
+        self.blocks[..self.blocks_count].hash(state);
+        self.blocks_count.hash(state);
+
+        self.characters[..self.characters_count].hash(state);
+        self.characters_count.hash(state);
+    }
+}
+
 // =========================================================================
 // UNIT TESTS DI VALIDAZIONE
 // =========================================================================

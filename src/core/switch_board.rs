@@ -7,7 +7,7 @@ use crate::common::LayerChannel;
 
 /// Quadro elettrico centrale del copione. Gestisce l'abilitazione binaria
 /// globale dei canali di visualizzazione. Vive nello Stack e implementa Copy.
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Hash)]
 pub struct SwitchBoard {
     pub channel_mask: [bool; 4],
 }

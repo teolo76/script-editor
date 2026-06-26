@@ -2,7 +2,7 @@
 use serde::{ Serialize, Deserialize };
 
 /// Identifica la funzione drammaturgica ed espressiva di un blocco di testo.
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum BlockType {
     /// Titolo 1 - Grande
     #[serde(rename = "heading_1")]

@@ -3,7 +3,7 @@ use serde::{ Serialize, Deserialize };
 
 /// Definisce i canali visivi e logici isolabili all'interno del copione.
 /// Implementa nativamente Copy ed Eq per l'uso immediato nelle matrici di filtraggio.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum LayerChannel {
     /// Il testo standard del copione (Dialoghi, Didascalie, Personaggi)
     ScriptText,

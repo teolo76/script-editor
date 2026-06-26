@@ -8,7 +8,7 @@ use crate::common::{BlockType, LayerChannel};
 use crate::core::{ Meta, VisualLayer };
 use crate::traits::{ BaseElement, TextElement };
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Hash)]
 pub struct Block<'a> {
     pub meta: Meta,
     #[serde(rename = "type")]

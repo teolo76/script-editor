@@ -10,7 +10,7 @@ use crate::traits::BaseElement;
 /// Rappresenta un Personaggio all'interno del copione.
 /// Include i metadati di produzione per attori e note di reparto (Costumi, Trucco, ecc.).
 /// Risiede interamente nello Stack grazie a &'a str e implementa Copy.
-#[derive(Serialize,Deserialize,Debug, Copy, Clone, PartialEq )]
+#[derive(Serialize,Deserialize,Debug, Copy, Clone, PartialEq, Hash)]
 pub struct Character<'a> {
     pub meta: Meta,
     /// Il nome del personaggio come appare nel copione (es. "AMLETO")
