@@ -1,4 +1,4 @@
-//! src/engines/io/error.rs
+//! src/io/error.rs
 use uuid::Uuid;
 use serde::{ Serialize, Deserialize };
 use std::fmt;

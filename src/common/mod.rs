@@ -6,6 +6,7 @@ mod block_types;
 mod bounding_box;
 mod cover_image;
 mod layer_channels;
+pub mod rules;
 
 pub use block_types::BlockType;
 pub use bounding_box::BoundingBox;

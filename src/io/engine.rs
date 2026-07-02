@@ -1,4 +1,4 @@
-//! src/engines/io/engine.rs
+//! src/io/engine.rs
 
 use uuid::Uuid;
 use serde::{ Serialize, Deserialize };
@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 // Package Modules & Files
 use crate::elements::{ Script, Act, Scene, Block};
-use crate::engines::io::error::IoError;
-use crate::engines::io::rules::{ PaginationRules, ThemeRules };
+use crate::io::error::IoError;
+use crate::common::rules::{PaginationRules, ThemeRules };
 
 // Architettura del file su disco
 
@@ -99,8 +99,8 @@ mod engine_tests {
     use crate::core::{Meta, VisualLayer };
     use crate::elements::{Script, Act, Scene, Block};
     use crate::traits::TextElement;
-    use crate::engines::io::error::IoError;
-    use crate::engines::io::rules::{ThemeRules, PaginationRules};
+    use crate::io::error::IoError;
+    use crate::common::rules::{ThemeRules, PaginationRules};
 
     #[test]
     fn test_io_engine_roundtrip_with_lifetimes() {
