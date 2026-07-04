@@ -42,6 +42,9 @@ pub enum DslOperator {
 /// L'alberatura atomica dei Token del Lexer (Completamente Zero-Copy)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DslToken<'a> {
+    // Direttiva di sistema (#!) per preprocessing e versioning
+    SystemDirective(&'a str),
+
     // Comandi e Target
     Command(DslCommand),
     Target(DslTarget),
@@ -64,6 +67,7 @@ pub enum DslToken<'a> {
 impl<'a> fmt::Display for DslToken<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::SystemDirective(dir) => write!(f, "SystemDirective('{}')", dir),
             Self::Command(cmd) => write!(f, "Command({:?})", cmd),
             Self::Target(tgt) => write!(f, "Target({:?})", tgt),
             Self::Where => write!(f, "WHERE"),

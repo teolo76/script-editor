@@ -12,3 +12,5 @@ pub const MAX_COVER_BLOCKS: usize = 8;
 pub const MAGIC: &[u8; 4] = b"SCRP";
 /// Versione dello schema di archiviazione corrente dell'I/O Engine
 pub const IO_VERSION: u32 = 1;
+pub const SCRIPT_EXT: &str = ".script";
+pub const QUERY_EXT: &str = ".qscript";

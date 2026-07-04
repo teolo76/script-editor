@@ -253,6 +253,11 @@ impl<'a> DslParser<'a> {
     }
     /// Compila la sequenza di token nell'oggetto radice CompiledQuery.
     pub fn parse(&mut self) -> Result<CompiledQuery<'a>, DslError> {
+        // 0.Salta eventuali SystemDirective residue prima di cercare il comando
+        while let Some(DslToken::SystemDirective(_)) = self.peek() {
+            self.advance();
+        }
+        
         // 1. Estrazione del Comando iniziale (Isoliamo il peek)
         let command = match self.peek() {
             Some(DslToken::Command(cmd)) => Some(*cmd),

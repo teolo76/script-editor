@@ -87,10 +87,24 @@ impl<'a> DslLexer<'a> {
                 continue;
             }
 
-            // 2. GESTIONE COMMENTI (#): Salta tutto fino alla fine della riga o della stringa
+            // 2.GESTIONE DIRETTIVE DI SISTEMA (#!) VS COMMENTI NORMALI (#)
             if c == '#' {
-                while i < chars.len() && chars[i].1 != '\n' {
-                    i += 1;
+                if i + 1 < chars.len() && chars[i + 1].1 == '!' {
+                    // Trovato '#!' -> Estraiamo la direttiva fino a fine riga
+                    let start_directive = chars[i + 2].0;
+                    // CORRETTO: '\n' reale anziché '\\n'
+                    while i < chars.len() && chars[i].1 != '\n' {
+                        i += 1;
+                    }
+                    let end_directive = chars[i].0;
+                    let slice = &self.input[start_directive..end_directive];
+                    tokens.push(DslToken::SystemDirective(slice.trim()));
+                } else {
+                    // Trovato '#' normale -> Salta l'intera riga (commento utente)
+                    // CORRETTO: '\n' reale anziché '\\n'
+                    while i < chars.len() && chars[i].1 != '\n' {
+                        i += 1;
+                    }
                 }
                 continue;
             }
