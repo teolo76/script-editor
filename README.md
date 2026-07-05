@@ -1,1 +1,0 @@
-# Nuova versione rifattorizzata
