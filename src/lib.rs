@@ -1,5 +1,4 @@
-pub mod base;
 pub mod common;
-pub mod errors;
+pub mod core;
+pub mod elements;
 pub mod geometry;
-pub mod traits;
