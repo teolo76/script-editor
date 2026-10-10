@@ -1,10 +1,21 @@
 [package]
-name = "script-editor"
+name = "script-engine"
 version = "0.1.0"
 edition = "2024"
+authors = ["Il Tuo Nome <email@example.com>"]
+description = "Core headless engine per la gestione e il layout di copioni e sceneggiature"
+rust-version = "1.85" # Rust version baseline per la Edition 2024
+
+[lib]
+name="script_edt"
+path = "src/lib.rs"
 
 [dependencies]
-uuid = { version = "1.10",features = ["v4", "fast-rng", "serde"] }
+# Serializzazione ultra-veloce e conversione JSON/Binary
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-flate2 = "1.0"
+
+toml = "0.8"
+
+[dev-dependencies]
+pretty_assertions = "1.4"

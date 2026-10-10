@@ -1,0 +1,47 @@
+# data/presets/themes/classic_theater.toml
+
+name = "Classico Teatrale"
+author = "ScriptEngine Default"
+version = "1.0.0"
+
+[typography]
+font_family = "Courier New, Courier, monospace"
+font_size_pt = 12.0
+line_height = 1.5
+
+# Regole di layout proporzionale per variante/kind
+[rules.act]
+text_transform = "uppercase"
+text_align = "center"
+margin_top_percent = 5.0
+margin_bottom_percent = 3.0
+font_weight = "bold"
+
+[rules.scene]
+text_transform = "uppercase"
+text_align = "left"
+margin_top_percent = 3.0
+margin_bottom_percent = 2.0
+font_weight = "bold"
+
+[rules.character]
+text_transform = "uppercase"
+text_align = "left"
+margin_left_percent = 35.0 # Rientro al 35% per i personaggi
+margin_bottom_percent = 0.5
+font_weight = "normal"
+
+[rules.dialogue]
+text_transform = "none"
+text_align = "left"
+margin_left_percent = 20.0  # Rientro sinistro al 20%
+margin_right_percent = 20.0 # Rientro destro al 20% (ampiezza blocco 60%)
+margin_bottom_percent = 1.5
+
+[rules.stagedirection]
+text_transform = "none"
+text_align = "left"
+margin_left_percent = 15.0
+margin_right_percent = 15.0
+margin_bottom_percent = 2.0
+font_style = "italic"

@@ -1,0 +1,18 @@
+# data/presets/pagination/pocket_standard.toml
+
+name = "Pocket Script (Tascabile da Leggio)"
+description = "Formato tascabile compatto per attori durante le prove sul palco"
+format_kind = "Custom"
+
+[dimensions]
+aspect_ratio = 0.650
+
+[margins]
+top = { Percent = 3.0 }
+bottom = { Percent = 3.0 }
+left = { Percent = 5.0 }
+right = { Percent = 5.0 }
+
+[grid_conversion]
+base_chars_per_line = 50
+base_lines_per_page = 38

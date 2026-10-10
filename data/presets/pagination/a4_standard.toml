@@ -1,0 +1,20 @@
+# data/presets/pagination/a4_standard.toml
+
+name = "A4 Standard Teatrale"
+description = "Formato A4 proporzionale per copioni e sceneggiature"
+format_kind = "A4" # A4, Letter, Legal, Custom
+
+[dimensions]
+# Proporzione d'aspetto o rapporto normalizzato (es. A4 = 210mm / 297mm ≈ 0.707)
+aspect_ratio = 0.707
+
+[margins]
+top = { Percent = 5.0 }     # 5% di margine superiore
+bottom = { Percent = 5.0 }  # 5% di margine inferiore
+left = { Percent = 10.0 }   # 10% di margine sinistro (rilegatura)
+right = { Percent = 8.0 }   # 8% di margine destro
+
+[grid_conversion]
+# Parametri per la conversione da % a griglia di caratteri/righe nel LayoutEngine
+base_chars_per_line = 80  # Riferimento caratteri al 100% di larghezza utile
+base_lines_per_page = 55  # Riferimento righe al 100% di altezza utile

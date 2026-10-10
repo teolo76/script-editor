@@ -1,4 +1,9 @@
-pub mod common;
+// src/lib.rs
+
+pub mod commands;
+pub mod constants;
 pub mod core;
-pub mod elements;
-pub mod geometry;
+pub mod errors;
+pub mod lake;
+pub mod types;
+

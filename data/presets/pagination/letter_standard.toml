@@ -1,0 +1,18 @@
+# data/presets/pagination/letter_standard.toml
+
+name = "US Letter Standard"
+description = "Formato US Letter per lo standard cinematografico e teatrale americano"
+format_kind = "Letter"
+
+[dimensions]
+aspect_ratio = 0.772 # Rapporto US Letter (8.5in / 11.0in)
+
+[margins]
+top = { Percent = 4.5 }
+bottom = { Percent = 4.5 }
+left = { Pt = 36.0 }        # Margine per punzonatura a 3 fori (Hollywood standard) fisso a 36pt (0.5 in) per la rilegatura
+right = { Percent = 6.0 }
+
+[grid_conversion]
+base_chars_per_line = 75
+base_lines_per_page = 52

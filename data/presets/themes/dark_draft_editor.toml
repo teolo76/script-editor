@@ -1,0 +1,46 @@
+# data/presets/themes/dark_draft_editor.toml
+
+name = "Dark Draft Editor"
+author = "ScriptEngine Core"
+version = "1.0.0"
+
+[typography]
+font_family = "JetBrains Mono, Fira Code, monospace"
+font_size_pt = 13.0
+line_height = 1.6
+
+[rules.act]
+text_transform = "uppercase"
+text_align = "left"
+margin_top_percent = 4.0
+margin_bottom_percent = 2.0
+font_weight = "bold"
+
+[rules.scene]
+text_transform = "uppercase"
+text_align = "left"
+margin_top_percent = 2.5
+margin_bottom_percent = 1.5
+font_weight = "bold"
+
+[rules.character]
+text_transform = "uppercase"
+text_align = "left"
+margin_left_percent = 30.0
+margin_bottom_percent = 0.3
+font_weight = "bold"
+
+[rules.dialogue]
+text_transform = "none"
+text_align = "left"
+margin_left_percent = 18.0
+margin_right_percent = 18.0
+margin_bottom_percent = 1.0
+
+[rules.stagedirection]
+text_transform = "none"
+text_align = "left"
+margin_left_percent = 12.0
+margin_right_percent = 12.0
+margin_bottom_percent = 1.5
+font_style = "italic"

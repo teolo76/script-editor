@@ -1,0 +1,46 @@
+# data/presets/themes/broadway_musical.toml
+
+name = "Broadway Musical"
+author = "ScriptEngine Core"
+version = "1.0.0"
+
+[typography]
+font_family = "Helvetica, Arial, sans-serif"
+font_size_pt = 11.0
+line_height = 1.4
+
+[rules.act]
+text_transform = "uppercase"
+text_align = "center"
+margin_top_percent = 6.0
+margin_bottom_percent = 4.0
+font_weight = "bold"
+
+[rules.scene]
+text_transform = "uppercase"
+text_align = "center"
+margin_top_percent = 4.0
+margin_bottom_percent = 2.0
+font_weight = "bold"
+
+[rules.character]
+text_transform = "uppercase"
+text_align = "center"
+margin_left_percent = 0.0
+margin_bottom_percent = 0.5
+font_weight = "bold"
+
+[rules.dialogue]
+text_transform = "none"
+text_align = "left"
+margin_left_percent = 15.0
+margin_right_percent = 15.0
+margin_bottom_percent = 1.2
+
+[rules.stagedirection]
+text_transform = "none"
+text_align = "left"
+margin_left_percent = 10.0
+margin_right_percent = 10.0
+margin_bottom_percent = 1.5
+font_style = "normal"

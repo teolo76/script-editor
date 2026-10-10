@@ -1,51 +1,92 @@
 // src/core/node.rs
 
-use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
-use uuid::Uuid;
+//! Nodo strutturale dell'albero del copione: Root, Atto, Scena, e tipi
+//! custom definiti a livello di progetto (`NodeKind::Custom`).
+//!
+//! Un `Node` non tiene una lista di figli: l'appartenenza è espressa dal
+//! `parent` di ciascun figlio (in `BaseElement`), e l'elenco/ordine dei
+//! figli di un dato nodo si ottiene interrogando l'arena filtrando per
+//! `parent` e ordinando per `sort_order`. Tenere qui una lista
+//! duplicherebbe lo stato e andrebbe risincronizzata a ogni spostamento —
+//! meglio una fonte di verità sola.
 
-/// Atomo di navigazione gerarchica dell'albero del documento.
-///
-/// Rappresenta una posizione nell'albero ed è fortemente tipizzato tramite il tipo semantico `T`.
-/// Non memorizza il testo o la geometria del blocco, ma mantiene solo l'identità,
-/// l'indice di ordinamento e il puntatore al `DocumentRecord` reale presente nell'arena.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Node<T> {
-    /// Identificativo univoco del nodo all'interno della struttura ad albero
-    pub id: Uuid,
-    /// Puntatore all'identificativo del `DocumentRecord` memorizzato nell'arena piatta
-    pub record_id: Uuid,
-    /// Indice progressivo di ordinamento relativo tra nodi fratelli
-    pub sort_order: u32,
-    /// Marcatore a costo zero per vincolare il nodo a un tipo semantico (es. Scene, Act, Dialog)
-    #[serde(skip)]
-    pub _marker: PhantomData<T>,
+use crate::core::{ BaseElement, Meta, Entity, TreeElement };
+use crate::types::{ ElementId, NodeKind, SortKey, Timestamp, ROOT_ID };
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Node {
+    base: BaseElement,
+    pub kind: NodeKind,
+    /// Titolo visualizzato (es. "Atto I", "Scena 3 – Il giardino"). Per il
+    /// nodo Root resta `None`: il titolo dell'opera vive nei metadati di
+    /// progetto, non sul nodo Root.
+    pub title: Option<String>,
 }
 
-impl<T> Node<T> {
-    /// Crea un nuovo `Node<T>` assegnandogli un ID univoco casuale (v4).
-    pub fn new(record_id: Uuid, sort_order: u32) -> Self {
+impl Node {
+    pub fn new(kind: NodeKind, parent: Option<ElementId>,  order: SortKey, at: Timestamp,) -> Self {
         Self {
-            id: Uuid::new_v4(),
-            record_id,
-            sort_order,
-            _marker: PhantomData,
+            base: BaseElement::new(parent, order, at),
+            kind,
+            title: None,
         }
     }
 
-    /// Costruttore esplicito con ID predefinito (utile per il ripristino da I/O o deserializzazione).
-    pub fn with_id(id: Uuid, record_id: Uuid, sort_order: u32) -> Self {
+    /// Come `new`, ma con id esplicito invece che generato. Usato per il
+    /// nodo Root e dal command bus, che deve poter ricreare un nodo con lo
+    /// stesso id sia alla prima applicazione di un comando sia a ogni suo
+    /// redo.
+    pub fn with_id(id: ElementId, kind: NodeKind, parent: Option<ElementId>, order: SortKey, at: Timestamp) -> Self {
         Self {
-            id,
-            record_id,
-            sort_order,
-            _marker: PhantomData,
+            base: BaseElement::with_id(id, parent, order, at),
+            kind,
+            title: None,
         }
     }
 
-    /// Aggiorna l'indice di ordinamento progressivo del nodo.
-    pub fn set_sort_order(&mut self, new_order: u32) {
-        self.sort_order = new_order;
+    /// Il nodo Root: id fisso (`ROOT_ID`), nessun parent. Ce n'è uno solo
+    /// per documento, creato all'inizializzazione dell'arena.
+    pub fn root(at: Timestamp) -> Self {
+        Self{
+            base: BaseElement::with_id(ROOT_ID, None, SortKey::initial(), at),
+            kind: NodeKind::Root,
+            title: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// Cambia parent e posizione fra fratelli. Visibile solo all'interno
+    /// del crate: va chiamato esclusivamente da `commands::Command::MoveNode`
+    /// dopo aver validato l'assenza di cicli (vedi
+    /// `lake::Document::is_descendant_of`) — mai direttamente, altrimenti
+    /// si bypassano sia quella validazione sia la cronologia undo/redo.
+    /// Stesso principio di `Character::set_alias` per l'unicità
+    /// dell'alias: la validazione è un vincolo che riguarda l'intero
+    /// documento, non il singolo `Node`, quindi non vive qui.
+    pub(crate) fn reparent(&mut self, parent: Option<ElementId>, order: SortKey) {
+        self.base.parent = parent;
+        self.base.sort_order = order;
+    }
+}
+
+impl Entity for Node {
+    fn meta(&self) -> &Meta {
+        self.base.meta()
+    }
+}
+
+impl TreeElement for Node {
+    fn parent(&self) -> Option<ElementId> {
+        self.base.parent()
+    }
+
+    fn sort_order(&self) -> &SortKey {
+        self.base.sort_order()
     }
 }
 
@@ -53,57 +94,35 @@ impl<T> Node<T> {
 mod tests {
     use super::*;
 
-    // Struct dummy usata come marcatore di test.
-    // NOTA: Deriviamo Copy e Clone affinché PhantomData<MockScene> consenta a Node<MockScene> di derivare Copy!
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    struct MockScene;
-
     #[test]
-    fn test_node_creation_and_fields() {
-        let record_id = Uuid::new_v4();
-        let node: Node<MockScene> = Node::new(record_id, 10);
-
-        assert_ne!(node.id, Uuid::nil());
-        assert_eq!(node.record_id, record_id);
-        assert_eq!(node.sort_order, 10);
+    fn root_has_fixed_id_and_no_parent() {
+        let root = Node::root(Timestamp::from_unix_seconds(0));
+        assert_eq!(root.id(), ROOT_ID);
+        assert_eq!(root.parent(), None);
     }
 
     #[test]
-    fn test_node_with_id() {
-        let custom_id = Uuid::new_v4();
-        let record_id = Uuid::new_v4();
-        let node: Node<MockScene> = Node::with_id(custom_id, record_id, 5);
-
-        assert_eq!(node.id, custom_id);
-        assert_eq!(node.record_id, record_id);
-        assert_eq!(node.sort_order, 5);
+    fn new_node_has_generated_id_and_declared_parent() {
+        let root = Node::root(Timestamp::from_unix_seconds(0));
+        let act = Node::new(
+            NodeKind::Act,
+            Some(root.id()),
+            SortKey::initial(),
+            Timestamp::from_unix_seconds(0),
+        );
+        assert_ne!(act.id(), ROOT_ID);
+        assert_eq!(act.parent(), Some(root.id()));
     }
 
     #[test]
-    fn test_set_sort_order() {
-        let mut node: Node<MockScene> = Node::new(Uuid::new_v4(), 0);
-        node.set_sort_order(42);
-        assert_eq!(node.sort_order, 42);
-    }
-
-    #[test]
-    fn test_node_copy_and_clone() {
-        let node1: Node<MockScene> = Node::new(Uuid::new_v4(), 1);
-        let node2 = node1; // Ora è una vera copia bit-a-bit poiché MockScene è Copy!
-
-        assert_eq!(node1, node2);
-    }
-
-    #[test]
-    fn test_serde_serialization() {
-        let record_id = Uuid::new_v4();
-        let node: Node<MockScene> = Node::new(record_id, 3);
-
-        let json = serde_json::to_string(&node).expect("Serializzazione fallita");
-        let deserialized: Node<MockScene> = serde_json::from_str(&json).expect("Deserializzazione fallita");
-
-        assert_eq!(node.id, deserialized.id);
-        assert_eq!(node.record_id, deserialized.record_id);
-        assert_eq!(node.sort_order, deserialized.sort_order);
+    fn with_title_sets_title() {
+        let node = Node::new(
+            NodeKind::Scene,
+            None,
+            SortKey::initial(),
+            Timestamp::from_unix_seconds(0),
+        )
+            .with_title("Il giardino");
+        assert_eq!(node.title.as_deref(), Some("Il giardino"));
     }
 }
