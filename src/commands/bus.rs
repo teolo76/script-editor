@@ -1,3 +1,5 @@
+// src/command/bus.rs
+
 //! Il bus dei comandi: applica batch atomici al `Document`, mantiene la
 //! cronologia undo/redo e produce un `Delta` invece di restituire il
 //! documento intero.
@@ -486,6 +488,227 @@ mod tests {
 
         bus.undo(&mut doc).unwrap();
         assert_eq!(doc.annotation(ann_id).unwrap().anchored_element(), block_a);
+    }
+
+    // --- InsertAnnotation / RemoveAnnotation ---
+    //
+    // Prima di questo raggruppamento per dominio, le annotazioni si
+    // creavano chiamando `doc.insert_annotation(...)` direttamente, senza
+    // passare dal bus: nessun undo possibile. Questi due comandi chiudono
+    // quel gap.
+
+    #[test]
+    fn insert_annotation_then_undo_removes_it() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "Battuta da annotare."),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+
+        let (insert_ann, ann_id) =
+            Command::insert_annotation(layer_id, AnchorTarget::Element(block_id), "Nota di regia");
+        let delta = bus.apply(&mut doc, vec![insert_ann], t(0)).unwrap();
+        assert_eq!(delta.created, vec![ann_id]);
+        assert_eq!(doc.annotation(ann_id).unwrap().body, "Nota di regia");
+
+        bus.undo(&mut doc).unwrap();
+        assert!(doc.annotation(ann_id).is_none());
+    }
+
+    #[test]
+    fn remove_annotation_then_undo_reinserts_with_same_content() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "Battuta da annotare."),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+        let (insert_ann, ann_id) =
+            Command::insert_annotation(layer_id, AnchorTarget::Element(block_id), "Nota di regia");
+        bus.apply(&mut doc, vec![insert_ann], t(0)).unwrap();
+
+        bus.apply(&mut doc, vec![Command::remove_annotation(ann_id)], t(0)).unwrap();
+        assert!(doc.annotation(ann_id).is_none());
+
+        bus.undo(&mut doc).unwrap();
+        assert_eq!(doc.annotation(ann_id).unwrap().body, "Nota di regia");
+        assert_eq!(doc.annotation(ann_id).unwrap().anchored_element(), block_id);
+    }
+
+    // --- InsertText / DeleteText ---
+
+    #[test]
+    fn insert_text_pushes_annotation_at_its_start_but_extends_it_at_its_end() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+
+        // "Ma soft!" — "soft" occupa i caratteri [3, 7).
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "Ma soft!"),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+
+        let ann_id = doc.insert_annotation(Annotation::new(
+            layer_id,
+            AnchorTarget::TextRange { block_id, start: 3, end: 7 },
+            "Enfasi",
+            t(0),
+        ));
+
+        // Inserire esattamente al bordo iniziale (offset 3) spinge via
+        // l'annotazione: il testo nuovo resta fuori, l'intervallo si
+        // sposta ma non si allarga.
+        bus.apply(&mut doc, vec![Command::insert_text(block_id, 3, "anche ")], t(0))
+            .unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "Ma anche soft!");
+        assert_eq!(doc.annotation(ann_id).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 9, end: 13 });
+
+        // Inserire esattamente al bordo finale (ora 13) estende
+        // l'annotazione: il testo nuovo entra nell'intervallo.
+        bus.apply(&mut doc, vec![Command::insert_text(block_id, 13, "issima")], t(0))
+            .unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "Ma anche softissima!");
+        assert_eq!(doc.annotation(ann_id).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 9, end: 19 });
+
+        // Due undo, in ordine inverso, riportano testo e ancora esattamente a prima.
+        bus.undo(&mut doc).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "Ma anche soft!");
+        assert_eq!(doc.annotation(ann_id).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 9, end: 13 });
+
+        bus.undo(&mut doc).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "Ma soft!");
+        assert_eq!(doc.annotation(ann_id).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 3, end: 7 });
+    }
+
+    #[test]
+    fn delete_text_shifts_trailing_annotation_and_collapses_contained_one() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+
+        // "Ma soft, dolce notte" — "soft" in [3, 7), "notte" in [15, 20).
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "Ma soft, dolce notte"),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+
+        let contained = doc.insert_annotation(Annotation::new(
+            layer_id,
+            AnchorTarget::TextRange { block_id, start: 3, end: 7 },
+            "Enfasi su soft",
+            t(0),
+        ));
+        let trailing = doc.insert_annotation(Annotation::new(
+            layer_id,
+            AnchorTarget::TextRange { block_id, start: 15, end: 20 },
+            "Enfasi su notte",
+            t(0),
+        ));
+
+        // Rimuove "soft, " (caratteri [3, 9)): l'annotazione su "soft" vi è
+        // interamente contenuta e collassa; quella su "notte", interamente
+        // dopo, retrocede della lunghezza rimossa (6).
+        bus.apply(&mut doc, vec![Command::delete_text(block_id, 3, 9)], t(0)).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "Ma dolce notte");
+        assert_eq!(doc.annotation(contained).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 3, end: 3 });
+        assert_eq!(doc.annotation(trailing).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 9, end: 14 });
+        // Il contenuto della nota non va perso solo perché il testo a cui
+        // puntava è stato tagliato.
+        assert_eq!(doc.annotation(contained).unwrap().body, "Enfasi su soft");
+
+        // L'undo ripristina testo e ancore esattamente com'erano, incluso
+        // l'intervallo originale dell'annotazione collassata.
+        bus.undo(&mut doc).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "Ma soft, dolce notte");
+        assert_eq!(doc.annotation(contained).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 3, end: 7 });
+        assert_eq!(doc.annotation(trailing).unwrap().anchor, AnchorTarget::TextRange { block_id, start: 15, end: 20 });
+    }
+
+    #[test]
+    fn insert_text_rejects_offset_past_end_of_text() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "Corta"),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+
+        let err = bus
+            .apply(&mut doc, vec![Command::insert_text(block_id, 999, "x")], t(0))
+            .unwrap_err();
+        assert!(matches!(err, CoreError::TextOffsetOutOfBounds { block_id: b, offset: 999, len: 5 } if b == block_id));
+    }
+
+    #[test]
+    fn delete_text_rejects_inverted_range() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "Corta"),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+
+        let err = bus
+            .apply(&mut doc, vec![Command::delete_text(block_id, 4, 1)], t(0))
+            .unwrap_err();
+        assert!(matches!(err, CoreError::InvalidTextRange { block_id: b, start: 4, end: 1, len: 5 } if b == block_id));
+    }
+
+    #[test]
+    fn insert_and_delete_text_use_character_offsets_not_byte_offsets() {
+        let mut doc = Document::new(t(0));
+        let mut bus = CommandBus::new();
+        let layer_id: LayerId = ElementId::new();
+
+        // "perché" ha 6 caratteri ma 7 byte ('é' è 2 byte in UTF-8): se gli
+        // offset fossero byte, inserire/tagliare qui spaccherebbe un
+        // carattere a metà e Rust andrebbe in panic su un bordo non valido.
+        let (insert_block, block_id) = Command::insert_block(
+            TextBlock::new(BlockKind::Dialogue, "perché no"),
+            layer_id,
+            doc.root_id(),
+            SortKey::initial(),
+        );
+        bus.apply(&mut doc, vec![insert_block], t(0)).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text.chars().count(), 9);
+
+        // Inserisce "sì, " subito dopo "perché " (offset 7, in caratteri).
+        bus.apply(&mut doc, vec![Command::insert_text(block_id, 7, "sì, ")], t(0))
+            .unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "perché sì, no");
+
+        // Rimuove "perché " (caratteri [0, 7)), senza spaccare la 'é'.
+        bus.apply(&mut doc, vec![Command::delete_text(block_id, 0, 7)], t(0)).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "sì, no");
+
+        bus.undo(&mut doc).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "perché sì, no");
+        bus.undo(&mut doc).unwrap();
+        assert_eq!(doc.block(block_id).unwrap().as_text().unwrap().text, "perché no");
     }
 
     #[test]

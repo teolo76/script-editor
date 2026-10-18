@@ -6,9 +6,7 @@
 
 use std::fmt;
 
-// Package Modules
-use crate::constants::{ ALIAS_MIN_LEN, ALIAS_MAX_LEN };
-use crate::types::{ElementId, CharacterAlias};
+use crate::types::{CharacterAlias, ElementId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoreError {
@@ -29,6 +27,16 @@ pub enum CoreError {
     /// Uno spostamento renderebbe un elemento discendente di se stesso
     /// (o lo renderebbe figlio diretto di se stesso).
     CyclicMove(ElementId),
+    /// `InsertText` con un offset oltre la fine del testo attuale del
+    /// blocco. `offset` e `len` sono entrambi indici di carattere, non
+    /// byte — coerenti con `AnchorTarget::TextRange`.
+    TextOffsetOutOfBounds { block_id: ElementId, offset: usize, len: usize },
+    /// `DeleteText` con un intervallo non valido: `start > end`, oppure
+    /// `end` oltre la fine del testo. Anche qui indici di carattere.
+    InvalidTextRange { block_id: ElementId, start: usize, end: usize, len: usize },
+    /// `InsertText`/`DeleteText` su un `Block` che non è un `TextBlock`
+    /// (es. un `AssetBlock`): non ha un `text` su cui operare.
+    NotATextBlock(ElementId),
     /// Placeholder generico, da sostituire con varianti specifiche
     /// man mano che implementiamo comandi/validazione.
     Invalid(String),
@@ -37,19 +45,45 @@ pub enum CoreError {
 impl fmt::Display for CoreError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CoreError::ElementNotFound(id) => write!(f, "Elemento non trovato: {id}"),
-            CoreError::InvalidColor(e) => write!(f, "Colore non valido: {}", e),
-            CoreError::InvalidAlias(e) => write!(f, "Alias non valido: {}", e),
-            CoreError::DuplicateAlias(e) => write!(f, "Alias già in uso: {}", e),
-            CoreError::CannotMoveRoot => write!(f, "Il Nodo \'root\' non può essere spostato"),
-            CoreError::CannotRemoveRoot =>write!(f, "Il Nodo \'root\' non può essere rimosso"),
-            CoreError::CyclicMove(id) => write!(f, "Spostamento non valido. In conflitto con {}", id),
-            CoreError::Invalid(err) => write!(f, "Operazione non valida: {err}"),
+            CoreError::ElementNotFound(id) => write!(f, "elemento non trovato: {id}"),
+            CoreError::InvalidColor(err) => write!(f, "colore non valido: {err}"),
+            CoreError::InvalidAlias(err) => write!(f, "alias non valido: {err}"),
+            CoreError::DuplicateAlias(alias) => write!(f, "alias già in uso: {alias}"),
+            CoreError::CannotMoveRoot => write!(f, "il nodo Root non può essere spostato"),
+            CoreError::CannotRemoveRoot => write!(f, "il nodo Root non può essere rimosso"),
+            CoreError::CyclicMove(id) => {
+                write!(f, "spostamento non valido: creerebbe un ciclo coinvolgendo {id}")
+            }
+            CoreError::TextOffsetOutOfBounds { block_id, offset, len } => write!(
+                f,
+                "offset {offset} fuori dal testo del blocco {block_id} (lunghezza {len} caratteri)"
+            ),
+            CoreError::InvalidTextRange { block_id, start, end, len } => write!(
+                f,
+                "intervallo [{start}, {end}) non valido sul blocco {block_id} (lunghezza {len} caratteri)"
+            ),
+            CoreError::NotATextBlock(id) => write!(f, "il blocco {id} non è un blocco di testo"),
+            CoreError::Invalid(msg) => write!(f, "operazione non valida: {msg}"),
         }
     }
 }
 
 impl std::error::Error for CoreError {}
+
+/// Permette di usare `?` su un `Result<_, ColorParseError>` dentro una
+/// funzione che restituisce `CoreResult`, senza conversioni manuali.
+impl From<ColorParseError> for CoreError {
+    fn from(err: ColorParseError) -> Self {
+        CoreError::InvalidColor(err)
+    }
+}
+
+/// Come sopra, per `CharacterAliasError`.
+impl From<CharacterAliasError> for CoreError {
+    fn from(err: CharacterAliasError) -> Self {
+        CoreError::InvalidAlias(err)
+    }
+}
 
 pub type CoreResult<T> = Result<T, CoreError>;
 
@@ -68,10 +102,10 @@ impl fmt::Display for ColorParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ColorParseError::InvalidHexLength(len) => {
-                write!(f, "Lunghezza esadecimale non valida: {len} atteso 6 o 8 caratteri")
+                write!(f, "lunghezza esadecimale non valida: {len} cifre (attese 6 o 8)")
             }
             ColorParseError::InvalidHexDigits(s) => {
-                write!(f, "Cifre esadecimali non valide: \"{s}\"")
+                write!(f, "cifre esadecimali non valide: \"{s}\"")
             }
         }
     }
@@ -94,30 +128,15 @@ impl fmt::Display for CharacterAliasError {
         match self {
             CharacterAliasError::InvalidLength(len) => write!(
                 f,
-                "Lunghezza Alias non valida: {len} atteso tra {ALIAS_MIN_LEN} e {ALIAS_MAX_LEN} caratteri"
+                "lunghezza alias non valida: {len} caratteri (attesi {}-{})",
+                crate::constants::ALIAS_MIN_LEN,
+                crate::constants::ALIAS_MAX_LEN
             ),
-            CharacterAliasError::InvalidCharacters(s) => write!(
-                f,
-                "Caratteri non validi in Alias: \"{s}\""
-            ),
+            CharacterAliasError::InvalidCharacters(s) => {
+                write!(f, "caratteri non validi nell'alias: \"{s}\"")
+            }
         }
     }
 }
 
 impl std::error::Error for CharacterAliasError {}
-
-
-/// Permette di usare `?` su un `Result<_, ColorParseError>` dentro una
-/// funzione che restituisce `CoreResult`, senza conversioni manuali — utile
-/// non appena il loader del TOML dovrà propagare un colore malformato.
-impl From<ColorParseError> for CoreError {
-    fn from(err: ColorParseError) -> Self {
-        CoreError::InvalidColor(err)
-    }
-}
-
-impl From<CharacterAliasError> for CoreError {
-    fn from(err: CharacterAliasError) -> Self {
-        CoreError::InvalidAlias(err)
-    }
-}

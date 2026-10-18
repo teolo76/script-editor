@@ -46,6 +46,25 @@ impl Annotation {
         }
     }
 
+    /// Come `new`, ma con id esplicito: usato dal command bus, che deve
+    /// poter generare l'id prima ancora di eseguire il comando (vedi il
+    /// commento in cima a `commands::command`) e ricreare l'annotazione
+    /// con lo stesso id a ogni redo.
+    pub fn with_id(
+        id: ElementId,
+        layer: LayerId,
+        anchor: AnchorTarget,
+        body: impl Into<String>,
+        created_at: Timestamp,
+    ) -> Self {
+        Self {
+            meta: Meta::with_id(id, created_at),
+            layer,
+            anchor,
+            body: body.into(),
+        }
+    }
+
     /// L'elemento a cui questa annotazione fa riferimento, sia che sia
     /// ancorata all'intero elemento sia a un intervallo al suo interno.
     /// Utile all'arena per rispondere a "quali annotazioni riguardano

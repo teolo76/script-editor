@@ -12,6 +12,21 @@
 mod bus;
 mod command;
 
+// Un sotto-modulo per dominio (Node, Block, Layer, Character, Annotation,
+// DocMeta): ciascuno possiede il proprio sotto-enum di comando/inverso e
+// la logica di apply/revert, invece di un unico match gigante in
+// `command.rs`. Restano privati al modulo `commands`: l'unica superficie
+// pubblica per mutare il documento è `Command` + `CommandBus` (vedi il
+// commento in cima a `command.rs`).
+mod annotation_cmd;
+mod block_cmd;
+mod character_cmd;
+mod doc_meta_cmd;
+mod layer_cmd;
+mod node_cmd;
+
+
+
 // Re-export Metodi
 pub use bus::CommandBus;
 pub use command::{ Command, Delta };
